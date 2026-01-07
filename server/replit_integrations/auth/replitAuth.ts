@@ -51,12 +51,18 @@ function updateUserSession(
 }
 
 async function upsertUser(claims: any) {
+  const userId = claims["sub"];
+  const existingUser = await authStorage.getUser(userId);
+  
   await authStorage.upsertUser({
-    id: claims["sub"],
+    id: userId,
     email: claims["email"],
+    username: claims["email"] || userId,
     firstName: claims["first_name"],
     lastName: claims["last_name"],
     profileImageUrl: claims["profile_image_url"],
+    // Keep existing role if user already exists, otherwise default to admin for testing
+    role: (existingUser as any)?.role || "admin",
   });
 }
 

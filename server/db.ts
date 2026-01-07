@@ -11,19 +11,21 @@ const sanitizeUrl = (url?: string) => {
   return trimmed;
 };
 
-const externalUrl = sanitizeUrl(process.env.DATABASE_URL_EXTERNAL_LINK);
-const internalUrl = sanitizeUrl(process.env.DATABASE_URL);
-
-let connectionString = externalUrl || internalUrl;
+// Use DATABASE_URL as the primary source now that it's updated
+const connectionString = sanitizeUrl(process.env.DATABASE_URL);
 
 if (!connectionString) {
-  throw new Error("No valid database connection string found.");
+  throw new Error("No valid database connection string found in DATABASE_URL.");
 }
 
 // Replit's environment often injects PG* variables that conflict with connectionString.
 // We remove them completely to ensure connectionString is the source of truth.
 const pgVars = ['PGHOST', 'PGUSER', 'PGDATABASE', 'PGPASSWORD', 'PGPORT'];
-pgVars.forEach(v => delete process.env[v]);
+pgVars.forEach(v => {
+  try {
+    delete process.env[v];
+  } catch (e) {}
+});
 
 export const pool = new Pool({ 
   connectionString,
