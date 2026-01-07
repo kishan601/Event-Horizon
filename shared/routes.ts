@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertEventSchema, insertAttendeeSchema, events, attendees } from './schema';
+import { insertEventSchema, insertAttendeeSchema, events, attendees, users } from './schema';
 
 export const errorSchemas = {
   validation: z.object({
@@ -9,12 +9,24 @@ export const errorSchemas = {
   notFound: z.object({
     message: z.string(),
   }),
+  unauthorized: z.object({
+    message: z.string(),
+  }),
   internal: z.object({
     message: z.string(),
   }),
 };
 
 export const api = {
+  auth: {
+    me: {
+      method: 'GET' as const,
+      path: '/api/me',
+      responses: {
+        200: z.custom<typeof users.$inferSelect>().nullable(),
+      },
+    },
+  },
   events: {
     list: {
       method: 'GET' as const,
@@ -34,10 +46,21 @@ export const api = {
     create: {
       method: 'POST' as const,
       path: '/api/events',
-      input: insertEventSchema,
+      input: insertEventSchema.omit({ isPublished: true, createdById: true }),
       responses: {
         201: z.custom<typeof events.$inferSelect>(),
         400: errorSchemas.validation,
+        401: errorSchemas.unauthorized,
+      },
+    },
+    publish: {
+      method: 'PATCH' as const,
+      path: '/api/events/:id/publish',
+      input: z.object({ isPublished: z.boolean() }),
+      responses: {
+        200: z.custom<typeof events.$inferSelect>(),
+        401: errorSchemas.unauthorized,
+        404: errorSchemas.notFound,
       },
     },
     delete: {
@@ -45,6 +68,7 @@ export const api = {
       path: '/api/events/:id',
       responses: {
         204: z.void(),
+        401: errorSchemas.unauthorized,
         404: errorSchemas.notFound,
       },
     },
@@ -53,7 +77,7 @@ export const api = {
     create: {
       method: 'POST' as const,
       path: '/api/events/:eventId/attendees',
-      input: insertAttendeeSchema.omit({ eventId: true }),
+      input: insertAttendeeSchema.omit({ eventId: true, userId: true }),
       responses: {
         201: z.custom<typeof attendees.$inferSelect>(),
         400: errorSchemas.validation,
@@ -65,6 +89,7 @@ export const api = {
       path: '/api/attendees/:id',
       responses: {
         204: z.void(),
+        401: errorSchemas.unauthorized,
         404: errorSchemas.notFound,
       },
     }

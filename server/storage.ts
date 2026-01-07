@@ -2,39 +2,62 @@ import { db } from "./db";
 import {
   events,
   attendees,
+  users,
   type InsertEvent,
   type InsertAttendee,
   type Event,
-  type Attendee
+  type Attendee,
+  type User
 } from "@shared/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
 
 export interface IStorage {
-  getEvents(): Promise<(Event & { attendeeCount: number })[]>;
+  getUser(id: string): Promise<User | undefined>;
+  createUser(user: any): Promise<User>;
+
+  getEvents(onlyPublished?: boolean): Promise<(Event & { attendeeCount: number })[]>;
   getEvent(id: number): Promise<(Event & { attendees: Attendee[] }) | undefined>;
-  createEvent(event: InsertEvent): Promise<Event>;
+  createEvent(event: InsertEvent & { createdById: string }): Promise<Event>;
+  updateEvent(id: number, updates: Partial<Event>): Promise<Event>;
   deleteEvent(id: number): Promise<void>;
-  createAttendee(attendee: InsertAttendee): Promise<Attendee>;
+
+  createAttendee(attendee: InsertAttendee & { userId?: string }): Promise<Attendee>;
   deleteAttendee(id: number): Promise<void>;
+  getAttendeeByEventAndUser(eventId: number, userId: string): Promise<Attendee | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
-  async getEvents(): Promise<(Event & { attendeeCount: number })[]> {
-    const result = await db
+  async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async createUser(user: any): Promise<User> {
+    const [newUser] = await db.insert(users).values(user).returning();
+    return newUser;
+  }
+
+  async getEvents(onlyPublished = false): Promise<(Event & { attendeeCount: number })[]> {
+    let query = db
       .select({
         ...events,
         attendeeCount: sql<number>`count(${attendees.id})::int`,
       })
       .from(events)
-      .leftJoin(attendees, eq(events.id, attendees.eventId))
+      .leftJoin(attendees, eq(events.id, attendees.eventId));
+
+    if (onlyPublished) {
+      // @ts-ignore
+      query = query.where(eq(events.isPublished, true));
+    }
+
+    return await query
       .groupBy(events.id)
       .orderBy(sql`${events.date} asc`);
-    
-    return result;
   }
 
   async getEvent(id: number): Promise<(Event & { attendees: Attendee[] }) | undefined> {
-    const event = await db.select().from(events).where(eq(events.id, id)).then(res => res[0]);
+    const [event] = await db.select().from(events).where(eq(events.id, id));
     if (!event) return undefined;
 
     const eventAttendees = await db
@@ -46,9 +69,14 @@ export class DatabaseStorage implements IStorage {
     return { ...event, attendees: eventAttendees };
   }
 
-  async createEvent(event: InsertEvent): Promise<Event> {
+  async createEvent(event: InsertEvent & { createdById: string }): Promise<Event> {
     const [newEvent] = await db.insert(events).values(event).returning();
     return newEvent;
+  }
+
+  async updateEvent(id: number, updates: Partial<Event>): Promise<Event> {
+    const [updated] = await db.update(events).set(updates).where(eq(events.id, id)).returning();
+    return updated;
   }
 
   async deleteEvent(id: number): Promise<void> {
@@ -56,13 +84,21 @@ export class DatabaseStorage implements IStorage {
     await db.delete(events).where(eq(events.id, id));
   }
 
-  async createAttendee(attendee: InsertAttendee): Promise<Attendee> {
+  async createAttendee(attendee: InsertAttendee & { userId?: string }): Promise<Attendee> {
     const [newAttendee] = await db.insert(attendees).values(attendee).returning();
     return newAttendee;
   }
 
   async deleteAttendee(id: number): Promise<void> {
     await db.delete(attendees).where(eq(attendees.id, id));
+  }
+
+  async getAttendeeByEventAndUser(eventId: number, userId: string): Promise<Attendee | undefined> {
+    const [attendee] = await db
+      .select()
+      .from(attendees)
+      .where(and(eq(attendees.eventId, eventId), eq(attendees.userId, userId)));
+    return attendee;
   }
 }
 
