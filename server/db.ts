@@ -4,13 +4,7 @@ import * as schema from "@shared/schema";
 
 const { Pool } = pg;
 
-const databaseUrl = process.env.DATABASE_URL_EXTERNAL_LINK || process.env.DATABASE_URL;
-
-if (!databaseUrl) {
-  throw new Error(
-    "DATABASE_URL or DATABASE_URL_EXTERNAL_LINK must be set. Did you forget to provision a database?",
-  );
-}
+const databaseUrl = "postgresql://neondb_owner:npg_Gwzmrs94lpHV@ep-noisy-wind-adj6oeos-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require";
 
 export const pool = new Pool({ connectionString: databaseUrl });
 export const db = drizzle(pool, { schema });
