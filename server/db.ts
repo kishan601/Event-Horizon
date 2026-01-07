@@ -4,6 +4,12 @@ import * as schema from "@shared/schema";
 
 const { Pool } = pg;
 
+// Aggressively clear Replit's internal DB env vars to prevent "ENOTFOUND base"
+const pgVars = ['PGHOST', 'PGUSER', 'PGDATABASE', 'PGPASSWORD', 'PGPORT'];
+pgVars.forEach(v => {
+  delete process.env[v];
+});
+
 const sanitizeUrl = (url?: string) => {
   if (!url) return undefined;
   const trimmed = url.trim();
@@ -11,20 +17,12 @@ const sanitizeUrl = (url?: string) => {
   return trimmed;
 };
 
-// Primary connection string from user provided DATABASE_URL
+// Use DATABASE_URL as the primary source
 const connectionString = sanitizeUrl(process.env.DATABASE_URL);
 
 if (!connectionString) {
   throw new Error("No valid database connection string found in DATABASE_URL.");
 }
-
-// Ensure Replit's internal PG env vars don't interfere
-const pgVars = ['PGHOST', 'PGUSER', 'PGDATABASE', 'PGPASSWORD', 'PGPORT'];
-pgVars.forEach(v => {
-  try {
-    delete process.env[v];
-  } catch (e) {}
-});
 
 export const pool = new Pool({ 
   connectionString,

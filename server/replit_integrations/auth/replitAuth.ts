@@ -21,21 +21,34 @@ const getOidcConfig = memoize(
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   const pgStore = connectPg(session);
+  
+  const connectionString = process.env.DATABASE_URL?.trim();
+  
   const sessionStore = new pgStore({
-    conString: process.env.DATABASE_URL,
+    conString: connectionString,
     createTableIfMissing: false,
     ttl: sessionTtl,
     tableName: "sessions",
+    ssl: connectionString?.includes("neon.tech") ? { rejectUnauthorized: false } : false,
   });
+
+  // Handle errors explicitly
+  sessionStore.on('error', (err) => {
+    console.error("Session Store Error:", err);
+  });
+
   return session({
-    secret: process.env.SESSION_SECRET!,
+    secret: process.env.SESSION_SECRET || "eventflow-default-secret-2026",
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
+    proxy: true,
+    name: "eventflow.sid",
     cookie: {
       httpOnly: true,
       secure: true,
       maxAge: sessionTtl,
+      sameSite: "lax",
     },
   });
 }
@@ -54,16 +67,18 @@ async function upsertUser(claims: any) {
   const userId = claims["sub"];
   const existingUser = await authStorage.getUser(userId);
   
-  await authStorage.upsertUser({
+  const userData = {
     id: userId,
     email: claims["email"],
     username: claims["email"] || userId,
     firstName: claims["first_name"],
     lastName: claims["last_name"],
     profileImageUrl: claims["profile_image_url"],
-    // Keep existing role if user already exists, otherwise default to admin for testing
     role: (existingUser as any)?.role || "admin",
-  });
+  };
+
+  console.log("Upserting user:", { id: userId, email: userData.email, role: userData.role });
+  await authStorage.upsertUser(userData);
 }
 
 export async function setupAuth(app: Express) {

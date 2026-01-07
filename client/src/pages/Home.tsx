@@ -1,14 +1,17 @@
 import { useEvents } from "@/hooks/use-events";
 import { Link } from "wouter";
-import { Calendar, MapPin, Users, ChevronRight, Search } from "lucide-react";
+import { Calendar, MapPin, Users, ChevronRight, Search, LogIn } from "lucide-react";
 import { CreateEventButton } from "@/components/EventForm";
 import { format } from "date-fns";
 import { Sidebar } from "@/components/Sidebar";
 import { motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
+import { Button } from "@/components/ui/button";
 
 export default function Home() {
+  const { user } = useAuth();
   const { data: events, isLoading, error } = useEvents();
   const [search, setSearch] = useState("");
 
@@ -33,7 +36,16 @@ export default function Home() {
                 Overview of your upcoming events.
               </p>
             </div>
-            <CreateEventButton />
+            {user ? (
+              <CreateEventButton />
+            ) : (
+              <Button asChild className="btn-primary flex items-center gap-2">
+                <a href="/api/login">
+                  <LogIn className="w-5 h-5" />
+                  Log in to Create Event
+                </a>
+              </Button>
+            )}
           </div>
 
           {/* Search & Filter */}

@@ -51,8 +51,10 @@ app.use((req, res, next) => {
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
-
-      log(logLine);
+      
+      // Log session status for debugging
+      const authStatus = (req as any).isAuthenticated?.() ? `Auth: YES` : "Auth: NO";
+      log(`${logLine} [${authStatus}]`);
     }
   });
 

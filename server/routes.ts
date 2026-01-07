@@ -46,10 +46,12 @@ export async function registerRoutes(
       const dbUser = await storage.getUser(req.user.claims.sub);
       
       if (!dbUser) {
+        console.log("Create Event: User profile not found for sub:", req.user.claims.sub);
         return res.status(401).json({ message: "User profile not found. Please log in again." });
       }
 
       if (dbUser.role !== "admin") {
+        console.log("Create Event: User is not admin. Role:", dbUser.role);
         return res.status(403).json({ message: "Only admins can create events. Your current role is: " + dbUser.role });
       }
 
@@ -59,6 +61,7 @@ export async function registerRoutes(
         createdById: dbUser.id,
         isPublished: false 
       });
+      console.log("Create Event: Success", { eventId: event.id });
       res.status(201).json(event);
     } catch (err) {
       console.error("Event creation error:", err);
@@ -68,7 +71,7 @@ export async function registerRoutes(
           field: err.errors[0].path.join('.'),
         });
       }
-      res.status(500).json({ message: "Internal server error while creating event" });
+      res.status(500).json({ message: "Internal server error while creating event: " + (err instanceof Error ? err.message : String(err)) });
     }
   });
 
