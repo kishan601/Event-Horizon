@@ -40,7 +40,15 @@ export class DatabaseStorage implements IStorage {
   async getEvents(onlyPublished = false): Promise<(Event & { attendeeCount: number })[]> {
     let query = db
       .select({
-        ...events,
+        id: events.id,
+        title: events.title,
+        description: events.description,
+        date: events.date,
+        location: events.location,
+        capacity: events.capacity,
+        isPublished: events.isPublished,
+        createdById: events.createdById,
+        createdAt: events.createdAt,
         attendeeCount: sql<number>`count(${attendees.id})::int`,
       })
       .from(events)
