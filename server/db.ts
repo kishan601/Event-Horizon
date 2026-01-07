@@ -11,15 +11,14 @@ const sanitizeUrl = (url?: string) => {
   return trimmed;
 };
 
-// Use DATABASE_URL as the primary source now that it's updated
+// Primary connection string from user provided DATABASE_URL
 const connectionString = sanitizeUrl(process.env.DATABASE_URL);
 
 if (!connectionString) {
   throw new Error("No valid database connection string found in DATABASE_URL.");
 }
 
-// Replit's environment often injects PG* variables that conflict with connectionString.
-// We remove them completely to ensure connectionString is the source of truth.
+// Ensure Replit's internal PG env vars don't interfere
 const pgVars = ['PGHOST', 'PGUSER', 'PGDATABASE', 'PGPASSWORD', 'PGPORT'];
 pgVars.forEach(v => {
   try {
