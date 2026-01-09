@@ -55,7 +55,7 @@ export class DatabaseStorage implements IStorage {
         isPublished: events.isPublished,
         createdById: events.createdById,
         createdAt: events.createdAt,
-        attendeeCount: sql<number>`count(${attendees.id})::int`,
+        attendeeCount: sql<number>`COALESCE(count(${attendees.id}), 0)::int`,
       })
       .from(events)
       .leftJoin(attendees, eq(events.id, attendees.eventId));
