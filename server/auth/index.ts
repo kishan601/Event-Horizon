@@ -25,12 +25,28 @@ export function setupAuth(app: Express) {
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
+        console.log("Login Attempt:", { username });
         const user = await storage.getUserByUsername(username);
-        if (!user || user.password !== hashPassword(password)) {
+        if (!user) {
+          console.log("Login Failed: User not found", { username });
           return done(null, false, { message: "Invalid username or password" });
         }
+        
+        const hashed = hashPassword(password);
+        console.log("Password check:", { 
+          provided: hashed, 
+          stored: user.password 
+        });
+
+        if (user.password !== hashed) {
+          console.log("Login Failed: Password mismatch", { username });
+          return done(null, false, { message: "Invalid username or password" });
+        }
+        
+        console.log("Login Success:", { username, role: user.role });
         return done(null, user);
       } catch (err) {
+        console.error("Login Error:", err);
         return done(err);
       }
     })
@@ -70,8 +86,16 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/login", passport.authenticate("local"), (req, res) => {
-    res.json(req.user);
+  app.post("/api/login", (req, res, next) => {
+    passport.authenticate("local", (err: any, user: any, info: any) => {
+      if (err) return next(err);
+      if (!user) return res.status(401).json({ message: info?.message || "Login failed" });
+      
+      req.login(user, (err) => {
+        if (err) return next(err);
+        res.json(user);
+      });
+    })(req, res, next);
   });
 
   app.post("/api/logout", (req, res, next) => {
