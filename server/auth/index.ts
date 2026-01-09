@@ -6,8 +6,8 @@ import { storage } from "../storage";
 import crypto from "crypto";
 
 function hashPassword(password: string) {
-  // admin123 -> 2403153524d770c0c0d165f1295b9d3635399583161c9e83c07f240989f64e40
-  return crypto.createHash("sha256").update(password).digest("hex");
+  // Temporarily disabling hashing for debugging as per user request
+  return password;
 }
 
 export function setupAuth(app: Express) {
