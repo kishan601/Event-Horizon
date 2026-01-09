@@ -1,11 +1,12 @@
-import { useEvent, useDeleteAttendee, useDeleteEvent } from "@/hooks/use-events";
+import { useEvent, useDeleteAttendee, useDeleteEvent, useRegisterAttendee } from "@/hooks/use-events";
 import { Link, useRoute, useLocation } from "wouter";
 import { Sidebar } from "@/components/Sidebar";
 import { RegisterAttendeeButton } from "@/components/AttendeeForm";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/use-auth";
 import { 
   ArrowLeft, Calendar, MapPin, Users, Trash2, 
-  MoreVertical, Mail, Clock
+  MoreVertical, Mail, Clock, UserPlus, UserMinus
 } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -30,10 +31,12 @@ export default function EventDetails() {
   const [match, params] = useRoute("/events/:id");
   const id = parseInt(params?.id || "0");
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
   
   const { data: event, isLoading, error } = useEvent(id);
   const deleteEvent = useDeleteEvent();
   const deleteAttendee = useDeleteAttendee(id);
+  const registerAttendee = useRegisterAttendee(id);
 
   if (isLoading) return (
     <div className="min-h-screen bg-background flex">
@@ -54,12 +57,28 @@ export default function EventDetails() {
     </div>
   );
 
+  const isAdmin = user?.role === "admin";
+  const myRegistration = event.attendees.find(a => a.userId === user?.id);
   const isFull = event.attendees.length >= event.capacity;
 
   const handleDeleteEvent = () => {
     deleteEvent.mutate(id, {
       onSuccess: () => setLocation("/")
     });
+  };
+
+  const handleRegister = () => {
+    if (!user) {
+      setLocation("/auth");
+      return;
+    }
+    registerAttendee.mutate({ name: user.username, email: user.email });
+  };
+
+  const handleCancelRegistration = () => {
+    if (myRegistration) {
+      deleteAttendee.mutate(myRegistration.id);
+    }
   };
 
   return (
@@ -101,45 +120,79 @@ export default function EventDetails() {
                   </div>
                 </div>
 
-                <AlertDialog>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <AlertDialogTrigger asChild>
-                        <DropdownMenuItem className="text-destructive focus:text-destructive">
-                          <Trash2 className="mr-2 h-4 w-4" />
+                {isAdmin && (
+                  <AlertDialog>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <AlertDialogTrigger asChild>
+                          <DropdownMenuItem className="text-destructive focus:text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete Event
+                          </DropdownMenuItem>
+                        </AlertDialogTrigger>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete this event?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently delete "{event.title}" and remove all {event.attendees.length} registered attendees. This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteEvent} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                           Delete Event
-                        </DropdownMenuItem>
-                      </AlertDialogTrigger>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete this event?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This will permanently delete "{event.title}" and remove all {event.attendees.length} registered attendees. This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleDeleteEvent} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                        Delete Event
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
               </div>
 
-              <div className="mt-8 pt-8 border-t border-border">
-                <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2">About Event</h3>
-                <p className="text-foreground/80 leading-relaxed max-w-3xl">
-                  {event.description}
-                </p>
+              <div className="mt-8 pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center gap-6">
+                <div className="flex-1">
+                  <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2">About Event</h3>
+                  <p className="text-foreground/80 leading-relaxed max-w-3xl">
+                    {event.description}
+                  </p>
+                </div>
+                <div>
+                  {!isAdmin && (
+                    myRegistration ? (
+                      <Button 
+                        variant="destructive" 
+                        size="lg"
+                        className="rounded-2xl px-8"
+                        onClick={handleCancelRegistration}
+                        disabled={deleteAttendee.isPending}
+                      >
+                        <UserMinus className="w-5 h-5 mr-2" />
+                        Cancel Registration
+                      </Button>
+                    ) : (
+                      <Button 
+                        size="lg"
+                        className="rounded-2xl px-8 bg-accent hover:bg-accent/90"
+                        onClick={handleRegister}
+                        disabled={registerAttendee.isPending || isFull}
+                      >
+                        {isFull ? "Event Full" : (
+                          <>
+                            <UserPlus className="w-5 h-5 mr-2" />
+                            Register Now
+                          </>
+                        )}
+                      </Button>
+                    )
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -150,10 +203,10 @@ export default function EventDetails() {
               <div className="flex items-center gap-4">
                 <h2 className="text-2xl font-display font-bold">Attendees</h2>
                 <div className="px-3 py-1 rounded-full bg-secondary text-secondary-foreground text-sm font-medium">
-                  {event.attendees.length} / {event.capacity}
+                  {event.attendees.length} / {event.capacity} seats taken
                 </div>
               </div>
-              <RegisterAttendeeButton eventId={event.id} isFull={isFull} />
+              {isAdmin && <RegisterAttendeeButton eventId={event.id} isFull={isFull} />}
             </div>
 
             {/* List */}
@@ -161,7 +214,7 @@ export default function EventDetails() {
               <div className="text-center py-16 bg-muted/30 rounded-2xl border border-dashed border-border">
                 <Users className="w-12 h-12 text-muted-foreground/20 mx-auto mb-3" />
                 <h3 className="text-lg font-medium text-muted-foreground">No attendees yet</h3>
-                <p className="text-sm text-muted-foreground/70">Be the first to register!</p>
+                <p className="text-sm text-muted-foreground/70">{isAdmin ? "Add someone to the list!" : "Be the first to register!"}</p>
               </div>
             ) : (
               <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
@@ -169,9 +222,8 @@ export default function EventDetails() {
                   <thead>
                     <tr className="bg-muted/50 border-b border-border">
                       <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Name</th>
-                      <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Email</th>
-                      <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Registered</th>
-                      <th className="px-6 py-4 w-12"></th>
+                      <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">Registered</th>
+                      {isAdmin && <th className="px-6 py-4 w-12"></th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/50">
@@ -180,26 +232,22 @@ export default function EventDetails() {
                         <td className="px-6 py-4 font-medium text-foreground">
                           {attendee.name}
                         </td>
-                        <td className="px-6 py-4 text-muted-foreground">
-                          <div className="flex items-center">
-                            <Mail className="w-3 h-3 mr-2 opacity-50" />
-                            {attendee.email}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-muted-foreground">
+                        <td className="px-6 py-4 text-sm text-muted-foreground text-right">
                           {attendee.registeredAt && format(new Date(attendee.registeredAt), "MMM d, h:mm a")}
                         </td>
-                        <td className="px-6 py-4 text-right">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8 text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive hover:bg-destructive/10 transition-all"
-                            onClick={() => deleteAttendee.mutate(attendee.id)}
-                            disabled={deleteAttendee.isPending}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </td>
+                        {isAdmin && (
+                          <td className="px-6 py-4 text-right">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive hover:bg-destructive/10 transition-all"
+                              onClick={() => deleteAttendee.mutate(attendee.id)}
+                              disabled={deleteAttendee.isPending}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -207,7 +255,6 @@ export default function EventDetails() {
               </div>
             )}
           </div>
-
         </div>
       </main>
     </div>

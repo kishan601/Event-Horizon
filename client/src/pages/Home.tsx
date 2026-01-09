@@ -81,9 +81,11 @@ export default function Home() {
               <Calendar className="w-16 h-16 text-muted-foreground/30 mb-4" />
               <h3 className="text-xl font-bold text-foreground">No events found</h3>
               <p className="text-muted-foreground mt-2 mb-6 max-w-sm mx-auto">
-                Get started by creating your first event. It only takes a few seconds.
+                {user?.role === "admin" 
+                  ? "Get started by creating your first event. It only takes a few seconds." 
+                  : "There are no upcoming events at the moment. Please check back later!"}
               </p>
-              <CreateEventButton />
+              {user?.role === "admin" && <CreateEventButton />}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in stagger-2">

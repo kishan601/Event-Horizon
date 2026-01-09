@@ -48,7 +48,7 @@ export function RegisterAttendeeButton({ eventId, isFull }: { eventId: number; i
           {isFull ? "Event Full" : (
             <>
               <UserPlus className="w-4 h-4" />
-              Register Attendee
+              Add Attendee
             </>
           )}
         </button>
@@ -56,8 +56,8 @@ export function RegisterAttendeeButton({ eventId, isFull }: { eventId: number; i
       <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden border-none shadow-2xl bg-card rounded-2xl">
         <div className="bg-gradient-to-r from-accent/10 to-pink-500/10 p-6 border-b border-border/50">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-display text-accent">Register Attendee</DialogTitle>
-            <p className="text-muted-foreground mt-1">Add a new guest to the list.</p>
+            <DialogTitle className="text-2xl font-display text-accent">Add Attendee (Admin)</DialogTitle>
+            <p className="text-muted-foreground mt-1">Manually add a guest to the list.</p>
           </DialogHeader>
         </div>
 

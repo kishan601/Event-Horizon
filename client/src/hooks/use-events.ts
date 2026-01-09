@@ -12,7 +12,7 @@ export function useEvents() {
     queryFn: async () => {
       const res = await fetch(api.events.list.path);
       if (!res.ok) throw new Error("Failed to fetch events");
-      return api.events.list.responses[200].parse(await res.json());
+      return (api.events.list.responses[200] as any).parse(await res.json());
     },
   });
 }
@@ -25,7 +25,7 @@ export function useEvent(id: number) {
       const res = await fetch(url);
       if (res.status === 404) return null;
       if (!res.ok) throw new Error("Failed to fetch event");
-      return api.events.get.responses[200].parse(await res.json());
+      return (api.events.get.responses[200] as any).parse(await res.json());
     },
     enabled: !isNaN(id),
   });
@@ -57,7 +57,7 @@ export function useCreateEvent() {
         }
         throw new Error("Failed to create event");
       }
-      return api.events.create.responses[201].parse(await res.json());
+      return (api.events.create.responses[201] as any).parse(await res.json());
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.events.list.path] });
@@ -120,7 +120,7 @@ export function useRegisterAttendee(eventId: number) {
         }
         throw new Error("Failed to register attendee");
       }
-      return api.attendees.create.responses[201].parse(await res.json());
+      return (api.attendees.create.responses[201] as any).parse(await res.json());
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.events.get.path, eventId] });
