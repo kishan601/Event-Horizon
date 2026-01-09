@@ -1,14 +1,14 @@
 import { Link, useLocation } from "wouter";
 import { LayoutDashboard, CalendarPlus, Settings, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
 
 export function Sidebar() {
+  const { user } = useAuth();
   const [location] = useLocation();
 
   const links = [
-    { href: "/", label: "Dashboard", icon: LayoutDashboard },
-    // Only show create if we're not on the create modal (which is managed via state in this simple app, 
-    // but here we might just have a link or a button elsewhere. Let's keep it simple.)
+    { href: "/", label: user?.role === "admin" ? "Admin Dashboard" : "Dashboard", icon: LayoutDashboard },
   ];
 
   return (
