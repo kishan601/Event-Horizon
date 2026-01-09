@@ -3,30 +3,28 @@ import type { Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
-import { setupAuth, isAuthenticated } from "./replit_integrations/auth";
+import { setupAuth, isAuthenticated } from "./auth";
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  // Set up Replit Auth
-  await setupAuth(app);
+  // Set up Authentication
+  setupAuth(app);
 
   // Auth User helper
   app.get(api.auth.me.path, async (req: any, res) => {
     if (!req.isAuthenticated()) {
       return res.json(null);
     }
-    const userId = req.user.claims.sub;
-    const user = await storage.getUser(userId);
+    const user = req.user;
     res.json(user || null);
   });
   
   app.get(api.events.list.path, async (req: any, res) => {
     let isAdmin = false;
     if (req.isAuthenticated()) {
-      const dbUser = await storage.getUser(req.user.claims.sub);
-      isAdmin = dbUser?.role === "admin";
+      isAdmin = req.user?.role === "admin";
     }
     
     const events = await storage.getEvents(!isAdmin);
@@ -43,16 +41,14 @@ export async function registerRoutes(
 
   app.post(api.events.create.path, isAuthenticated, async (req: any, res) => {
     try {
-      const dbUser = await storage.getUser(req.user.claims.sub);
+      const dbUser = req.user;
       
       if (!dbUser) {
-        console.log("Create Event: User profile not found for sub:", req.user.claims.sub);
         return res.status(401).json({ message: "User profile not found. Please log in again." });
       }
 
       if (dbUser.role !== "admin") {
-        console.log("Create Event: User is not admin. Role:", dbUser.role);
-        return res.status(403).json({ message: "Only admins can create events. Your current role is: " + dbUser.role });
+        return res.status(403).json({ message: "Only admins can create events." });
       }
 
       const input = api.events.create.input.parse(req.body);
@@ -61,7 +57,6 @@ export async function registerRoutes(
         createdById: dbUser.id,
         isPublished: false 
       });
-      console.log("Create Event: Success", { eventId: event.id });
       res.status(201).json(event);
     } catch (err) {
       console.error("Event creation error:", err);
@@ -76,7 +71,7 @@ export async function registerRoutes(
   });
 
   app.patch(api.events.publish.path, isAuthenticated, async (req: any, res) => {
-    const dbUser = await storage.getUser(req.user.claims.sub);
+    const dbUser = req.user;
     
     if (!dbUser || dbUser.role !== "admin") {
       return res.status(401).json({ message: "Only admins can publish events" });
@@ -89,7 +84,7 @@ export async function registerRoutes(
   });
 
   app.delete(api.events.delete.path, isAuthenticated, async (req: any, res) => {
-    const dbUser = await storage.getUser(req.user.claims.sub);
+    const dbUser = req.user;
     
     if (!dbUser || dbUser.role !== "admin") {
       return res.status(401).json({ message: "Only admins can delete events" });
@@ -116,7 +111,7 @@ export async function registerRoutes(
 
       let userId = undefined;
       if (req.isAuthenticated()) {
-        const dbUser = await storage.getUser(req.user.claims.sub);
+        const dbUser = req.user;
         if (dbUser) {
           userId = dbUser.id;
           const existing = await storage.getAttendeeByEventAndUser(eventId, userId);

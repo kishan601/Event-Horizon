@@ -1,17 +1,18 @@
 import { useEvents } from "@/hooks/use-events";
-import { Link } from "wouter";
-import { Calendar, MapPin, Users, ChevronRight, Search, LogIn } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import { Calendar, MapPin, Users, ChevronRight, Search, LogIn, LogOut } from "lucide-react";
 import { CreateEventButton } from "@/components/EventForm";
 import { format } from "date-fns";
 import { Sidebar } from "@/components/Sidebar";
 import { motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 
 export default function Home() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const [, setLocation] = useLocation();
   const { data: events, isLoading, error } = useEvents();
   const [search, setSearch] = useState("");
 
@@ -30,22 +31,26 @@ export default function Home() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 animate-in">
             <div>
               <h1 className="text-4xl md:text-5xl font-display font-bold text-foreground">
-                Dashboard
+                {user?.role === "admin" ? "Admin Dashboard" : "Dashboard"}
               </h1>
               <p className="text-muted-foreground mt-2 text-lg">
-                Overview of your upcoming events.
+                {user ? `Welcome back, ${user.username}!` : "Overview of your upcoming events."}
               </p>
             </div>
-            {user ? (
-              <CreateEventButton />
-            ) : (
-              <Button asChild className="btn-primary flex items-center gap-2">
-                <a href="/api/login">
+            <div className="flex gap-2">
+              {user?.role === "admin" && <CreateEventButton />}
+              {user ? (
+                <Button variant="outline" onClick={() => logout()} className="flex items-center gap-2">
+                  <LogOut className="w-5 h-5" />
+                  Logout
+                </Button>
+              ) : (
+                <Button onClick={() => setLocation("/auth")} className="flex items-center gap-2">
                   <LogIn className="w-5 h-5" />
-                  Log in to Create Event
-                </a>
-              </Button>
-            )}
+                  Login
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Search & Filter */}
