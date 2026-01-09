@@ -74,7 +74,9 @@ export const attendeesRelations = relations(attendees, ({ one }) => ({
 }));
 
 export const insertUserSchema = createInsertSchema(users).omit({ createdAt: true, updatedAt: true });
-export const insertEventSchema = createInsertSchema(events).omit({ id: true, createdAt: true });
+export const insertEventSchema = createInsertSchema(events, {
+  date: z.coerce.date(),
+}).omit({ id: true, createdAt: true });
 export const insertAttendeeSchema = createInsertSchema(attendees).omit({ id: true, registeredAt: true });
 
 export type User = typeof users.$inferSelect;
