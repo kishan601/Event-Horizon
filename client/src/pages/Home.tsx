@@ -16,7 +16,7 @@ export default function Home() {
   const { data: events, isLoading, error } = useEvents();
   const [search, setSearch] = useState("");
 
-  const filteredEvents = events?.filter(event => 
+  const filteredEvents = events?.filter((event: any) => 
     event.title.toLowerCase().includes(search.toLowerCase()) ||
     event.location.toLowerCase().includes(search.toLowerCase())
   );
@@ -89,7 +89,7 @@ export default function Home() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in stagger-2">
-              {filteredEvents?.map((event) => (
+              {filteredEvents?.map((event: any) => (
                 <Link key={event.id} href={`/events/${event.id}`} className="block group h-full">
                   <motion.div 
                     whileHover={{ y: -5 }}

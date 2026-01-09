@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, buildUrl, type InsertEvent, type InsertAttendee } from "@shared/routes";
+import { api, buildUrl } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
+import { type InsertEvent, type InsertAttendee } from "@shared/schema";
 
 // ============================================
 // EVENTS HOOKS

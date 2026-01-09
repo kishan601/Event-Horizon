@@ -27,7 +27,10 @@ export async function registerRoutes(
       isAdmin = req.user?.role === "admin";
     }
     
-    const events = await storage.getEvents(!isAdmin);
+    // Non-logged in users and non-admin users should see only published events.
+    // Admins should see all events (published and drafts).
+    const onlyPublished = !isAdmin;
+    const events = await storage.getEvents(onlyPublished);
     res.json(events);
   });
 

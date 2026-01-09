@@ -67,7 +67,7 @@ export class DatabaseStorage implements IStorage {
 
     return await query
       .groupBy(events.id)
-      .orderBy(sql`${events.date} asc`);
+      .orderBy(sql`${events.date} ASC`);
   }
 
   async getEvent(id: number): Promise<(Event & { attendees: Attendee[] }) | undefined> {
